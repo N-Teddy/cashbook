@@ -3,7 +3,6 @@ import {
   ArrowRightLeft,
   Filter,
   Gift,
-  HandCoins,
   Plus,
   TrendingDown,
   TrendingUp,

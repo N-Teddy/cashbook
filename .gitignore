@@ -45,6 +45,10 @@ src-tauri/target/
 src-tauri/gen/
 src-tauri/.tauri/
 
+# Android keystore (never commit)
+*.jks
+*.keystore
+
 # Android (Tauri mobile)
 src-tauri/android/.gradle/
 src-tauri/android/**/build/

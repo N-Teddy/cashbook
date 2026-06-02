@@ -15,14 +15,18 @@ fn db_location(app: tauri::AppHandle) -> Result<String, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_biometric::init())
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let db = Db::open(&app.handle())?;
             app.manage(db);
             Ok(())
-        })
+        });
+
+    #[cfg(mobile)]
+    let builder = builder.plugin(tauri_plugin_biometric::init());
+
+    builder
         .invoke_handler(tauri::generate_handler![
             db_location,
             commands::accounts::account_count,
