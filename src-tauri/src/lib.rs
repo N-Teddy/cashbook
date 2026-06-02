@@ -1,6 +1,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod db;
 mod error;
+mod commands;
 
 use db::Db;
 use tauri::Manager;
@@ -21,7 +22,12 @@ pub fn run() {
             app.manage(db);
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![db_location])
+        .invoke_handler(tauri::generate_handler![
+            db_location,
+            commands::accounts::account_count,
+            commands::accounts::account_list,
+            commands::accounts::account_create
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -1,6 +1,14 @@
 import { AppShell } from "./components/AppShell";
+import { AccountSetupGate } from "./features/accounts/AccountSetupGate";
+import { useState } from "react";
 
 function App() {
+  const [ready, setReady] = useState(false);
+
+  if (!ready) {
+    return <AccountSetupGate onReady={() => setReady(true)} />;
+  }
+
   return (
     <AppShell>
       {(tab) => {
@@ -14,14 +22,14 @@ function App() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-2xl border border-zinc-200 bg-white p-4">
                     <div className="text-xs text-zinc-500">This month</div>
-                    <div className="mt-1 text-xl font-semibold">₦0</div>
+                    <div className="mt-1 text-xl font-semibold">XAF 0</div>
                     <div className="mt-1 text-xs text-zinc-500">
                       Net cashflow (placeholder)
                     </div>
                   </div>
                   <div className="rounded-2xl border border-zinc-200 bg-white p-4">
                     <div className="text-xs text-zinc-500">Spent</div>
-                    <div className="mt-1 text-xl font-semibold">₦0</div>
+                    <div className="mt-1 text-xl font-semibold">XAF 0</div>
                     <div className="mt-1 text-xs text-zinc-500">
                       Expenses (placeholder)
                     </div>
