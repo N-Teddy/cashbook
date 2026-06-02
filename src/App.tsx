@@ -5,6 +5,7 @@ import { DashboardScreen } from "./features/dashboard/DashboardScreen";
 import { TransactionsScreen } from "./features/transactions/TransactionsScreen";
 import { SettingsScreen } from "./features/settings/SettingsScreen";
 import { LockGate } from "./features/security/LockGate";
+import { DebtsScreen } from "./features/debts/DebtsScreen";
 
 function App() {
   const [ready, setReady] = useState(false);
@@ -29,14 +30,7 @@ function App() {
             return <TransactionsScreen />;
 
           case "debts":
-            return (
-              <section className="space-y-3">
-                <h1 className="text-lg font-semibold tracking-tight">Debts</h1>
-                <div className="rounded-2xl border border-dashed border-zinc-300 bg-white p-4 text-sm text-zinc-600">
-                  Debts + repayments UI will go here.
-                </div>
-              </section>
-            );
+            return <DebtsScreen />;
 
           case "settings":
             return <SettingsScreen />;

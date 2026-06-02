@@ -57,6 +57,18 @@ fn migrate(conn: &Connection) -> Result<(), DbError> {
         conn.execute("PRAGMA user_version = 3;", [])?;
     }
 
+    // Migration 4
+    if current < 4 {
+        conn.execute_batch(include_str!("../../migrations/0004_contacts.sql"))?;
+        conn.execute("PRAGMA user_version = 4;", [])?;
+    }
+
+    // Migration 5
+    if current < 5 {
+        conn.execute_batch(include_str!("../../migrations/0005_transaction_contacts.sql"))?;
+        conn.execute("PRAGMA user_version = 5;", [])?;
+    }
+
     Ok(())
 }
 

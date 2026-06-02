@@ -6,14 +6,14 @@ Implement the full Debts & Repayments feature end-to-end: 6 new Rust Tauri comma
 
 ## Tasks
 
-- [ ] 1. Create `src-tauri/src/commands/debts.rs` with all structs and the `debt_list` command
+- [x] 1. Create `src-tauri/src/commands/debts.rs` with all structs and the `debt_list` command
   - Define `DebtRow` serialise struct with all fields from the design (`id`, `kind`, `counterparty`, `principal_minor`, `currency`, `opened_at`, `due_at`, `status`, `note`, `outstanding_balance_minor`, `created_at`, `updated_at`) using `#[serde(rename_all = "camelCase")]`
   - Define `DebtCreateInput`, `DebtPaymentRow`, `DebtPaymentAddInput` deserialise structs
   - Implement `debt_list()` returning all non-deleted debts ordered by `opened_at DESC` with `outstanding_balance_minor` computed via correlated subquery
   - **Requires:** nothing
   - **Requirement coverage:** 2.1, 2.2
 
-- [ ] 2. Add `debt_create` command to `debts.rs`
+- [x] 2. Add `debt_create` command to `debts.rs`
   - Validate `kind` is `"owed_by_me"` or `"owed_to_me"`, counterparty non-empty after trim, `principal_minor > 0`
   - Default `currency` to `"XAF"` when not provided
   - Insert with `status = "open"`, `opened_at = now()`, UUID generated with `uuid::Uuid::new_v4()`
@@ -21,7 +21,7 @@ Implement the full Debts & Repayments feature end-to-end: 6 new Rust Tauri comma
   - **Requires:** Task 1
   - **Requirement coverage:** 1.1, 1.2, 1.3, 1.4, 1.5, 1.6
 
-- [ ] 3. Add `debt_set_status`, `debt_delete`, `debt_payment_add`, `debt_payment_list` commands to `debts.rs`
+- [x] 3. Add `debt_set_status`, `debt_delete`, `debt_payment_add`, `debt_payment_list` commands to `debts.rs`
   - `debt_set_status(debt_id, status)`: validate debt exists and is not deleted, validate status is `"open"` or `"closed"`, UPDATE with new status and `updated_at = now()`
   - `debt_delete(debt_id)`: validate debt exists, soft-delete all payments first then soft-delete the debt in the same logical operation
   - `debt_payment_add(input)`: validate `amount_minor > 0` and `debt_id` exists, INSERT payment, recompute balance and if ≤ 0 set debt `status = "closed"`, return the new `DebtPaymentRow`
@@ -29,21 +29,21 @@ Implement the full Debts & Repayments feature end-to-end: 6 new Rust Tauri comma
   - **Requires:** Task 1
   - **Requirement coverage:** 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 4.1, 4.2, 4.3, 5.1, 5.2, 5.3, 6.1, 6.2, 6.4, 7.1, 7.2, 7.3, 7.4
 
-- [ ] 4. Register the debts module in `commands/mod.rs` and `lib.rs`
+- [x] 4. Register the debts module in `commands/mod.rs` and `lib.rs`
   - Add `pub mod debts;` to `src-tauri/src/commands/mod.rs`
   - Add all 6 commands to the `invoke_handler!` macro in `src-tauri/src/lib.rs`
   - Run `cargo check` in `src-tauri/` and confirm zero compilation errors
   - **Requires:** Tasks 1, 2, 3
   - **Requirement coverage:** 1.1, 2.1, 3.1, 4.1, 5.1, 6.1
 
-- [ ] 5. Create `src/lib/debts.ts` with types and invoke wrappers
+- [x] 5. Create `src/lib/debts.ts` with types and invoke wrappers
   - Export types: `DebtKind`, `DebtStatus`, `DebtRow`, `DebtPaymentRow`, `DebtCreateInput`, `DebtPaymentAddInput`
   - Export 6 async functions, one per command, using `invoke` from `@tauri-apps/api/core`
   - All camelCase field names to match Rust's `serde(rename_all = "camelCase")`
   - **Requires:** Task 4
   - **Requirement coverage:** 1.1, 2.1, 3.1, 4.1, 5.1, 6.1
 
-- [ ] 6. Create `src/features/debts/DebtsScreen.tsx` — skeleton, state, data loading, and summary cards
+- [x] 6. Create `src/features/debts/DebtsScreen.tsx` — skeleton, state, data loading, and summary cards
   - Declare state: `debts: DebtRow[]`, `loading`, `error`, `showAdd`, `selectedDebt: DebtRow | null`, `showPayment`
   - Implement `refresh()` calling `debtList()` and a `useEffect` on mount
   - Render header with "Debts" title and dark "Add" button (same style as TransactionsScreen)
@@ -53,7 +53,7 @@ Implement the full Debts & Repayments feature end-to-end: 6 new Rust Tauri comma
   - **Requires:** Task 5
   - **Requirement coverage:** 2.3, 2.4, 8.1, 8.2, 8.3
 
-- [ ] 7. Add `DebtCard` component and the two debt list sections to `DebtsScreen.tsx`
+- [x] 7. Add `DebtCard` component and the two debt list sections to `DebtsScreen.tsx`
   - Create `isOverdue(debt: DebtRow): boolean` helper — returns `true` when `debt.dueAt` is set, `debt.status === "open"`, and `new Date(debt.dueAt) < today`
   - Create `DebtCard` inner component that renders: counterparty name, outstanding balance (red for `owed_by_me`, green for `owed_to_me`), original principal (muted), due date with amber overdue indicator when applicable, status badge ("Open" / "Settled"), action buttons ("Pay" only when open, "Settle"/"Reopen" toggle, trash icon)
   - Tapping the card body (not the action buttons) opens the Debt Detail modal by setting `selectedDebt`
@@ -61,7 +61,7 @@ Implement the full Debts & Repayments feature end-to-end: 6 new Rust Tauri comma
   - **Requires:** Task 6
   - **Requirement coverage:** 2.3, 2.4, 2.5, 2.6, 5.4, 6.3
 
-- [ ] 8. Add the Add Debt modal to `DebtsScreen.tsx`
+- [x] 8. Add the Add Debt modal to `DebtsScreen.tsx`
   - Use the existing `Modal` component with `open={showAdd}` and `onClose={() => setShowAdd(false)}`
   - Direction toggle: segmented "I owe" / "They owe me" buttons (same pattern as Expense/Income/Transfer in TransactionsScreen)
   - Counterparty text input (required), amount numeric input (`inputMode="numeric"`, required, integer), currency text input (default `"XAF"`), due date `<input type="date">` (optional), note text input (optional)
@@ -71,7 +71,7 @@ Implement the full Debts & Repayments feature end-to-end: 6 new Rust Tauri comma
   - **Requires:** Task 7
   - **Requirement coverage:** 1.1, 1.2, 1.3, 1.4, 1.5, 1.6
 
-- [ ] 9. Add the Debt Detail modal and Add Payment sub-form to `DebtsScreen.tsx`
+- [x] 9. Add the Debt Detail modal and Add Payment sub-form to `DebtsScreen.tsx`
   - Use `Modal` with `open={!!selectedDebt}` and `onClose={() => { setSelectedDebt(null); setShowPayment(false); }}`
   - On modal open, call `debtPaymentList(selectedDebt.id)` and store results in local `payments` state
   - Display kind label ("You owe" / "They owe you"), principal (muted), outstanding balance (large, coloured), due date with overdue indicator, note if any
@@ -83,7 +83,7 @@ Implement the full Debts & Repayments feature end-to-end: 6 new Rust Tauri comma
   - **Requires:** Tasks 7, 8
   - **Requirement coverage:** 3.1, 3.4, 3.5, 3.7, 4.1, 4.2, 4.3, 4.4, 4.5, 5.1, 5.2, 5.4, 6.1, 6.3, 6.4
 
-- [ ] 10. Wire `DebtsScreen` into `App.tsx` and run final checks
+- [x] 10. Wire `DebtsScreen` into `App.tsx` and run final checks
   - Import `DebtsScreen` from `./features/debts/DebtsScreen` in `src/App.tsx`
   - Replace the `case "debts"` placeholder block with `return <DebtsScreen />;`
   - Run TypeScript type check (`pnpm tsc --noEmit`) — zero errors

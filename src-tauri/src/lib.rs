@@ -42,7 +42,17 @@ pub fn run() {
             commands::security::security_verify_pattern,
             commands::transactions::transaction_list,
             commands::transactions::transaction_create_expense_income,
-            commands::transactions::transaction_create_transfer
+            commands::transactions::transaction_create_transfer,
+            commands::transactions::transaction_create_give_receive,
+            commands::debts::debt_list,
+            commands::debts::debt_create,
+            commands::debts::debt_set_status,
+            commands::debts::debt_delete,
+            commands::debts::debt_payment_add,
+            commands::debts::debt_payment_list,
+            commands::contacts::contact_list,
+            commands::contacts::contact_create,
+            commands::contacts::contact_delete
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
