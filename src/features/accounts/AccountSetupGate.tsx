@@ -29,7 +29,8 @@ export function AccountSetupGate(props: { onReady: () => void }) {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+
+    async function checkWithRetry(attempt: number) {
       try {
         const count = await accountCount();
         if (cancelled) return;
@@ -40,10 +41,30 @@ export function AccountSetupGate(props: { onReady: () => void }) {
         setLoading(false);
       } catch (e) {
         if (cancelled) return;
-        setError(e instanceof Error ? e.message : String(e));
+
+        const msg = e instanceof Error ? e.message : String(e);
+
+        // On mobile startup, the JS can run before the native invoke handler is ready.
+        // Also, if you open the Vite URL in a normal browser, Tauri commands won't exist.
+        const shouldRetry =
+          attempt < 8 &&
+          (msg.toLowerCase().includes("not found") ||
+            msg.toLowerCase().includes("invoke"));
+
+        if (shouldRetry) {
+          const delayMs = Math.min(1500, 100 * Math.pow(2, attempt));
+          setTimeout(() => {
+            void checkWithRetry(attempt + 1);
+          }, delayMs);
+          return;
+        }
+
+        setError(msg);
         setLoading(false);
       }
-    })();
+    }
+
+    void checkWithRetry(0);
     return () => {
       cancelled = true;
     };
