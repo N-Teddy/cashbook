@@ -15,6 +15,7 @@ export function AccountSetupGate(props: { onReady: () => void }) {
 
   const [name, setName] = useState("");
   const [type, setType] = useState<AccountTypeOption["value"]>("cash");
+  const [currency, setCurrency] = useState("XAF");
 
   const options = useMemo<AccountTypeOption[]>(
     () => [
@@ -78,9 +79,15 @@ export function AccountSetupGate(props: { onReady: () => void }) {
       return;
     }
 
+    const cur = currency.trim().toUpperCase();
+    if (!cur) {
+      setError("Please enter a currency (e.g. XAF).");
+      return;
+    }
+
     setSaving(true);
     try {
-      await accountCreate({ name: trimmed, type, currency: "XAF" });
+      await accountCreate({ name: trimmed, type, currency: cur });
       props.onReady();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -145,7 +152,19 @@ export function AccountSetupGate(props: { onReady: () => void }) {
 
           <div className="rounded-2xl bg-zinc-50 p-3">
             <div className="text-xs font-medium text-zinc-700">Currency</div>
-            <div className="mt-1 text-sm">XAF (Cameroon)</div>
+            <div className="mt-1 flex items-center gap-2">
+              <input
+                value={currency}
+                onChange={(e) => setCurrency(e.currentTarget.value)}
+                inputMode="text"
+                autoCapitalize="characters"
+                placeholder="XAF"
+                className="w-24 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400"
+              />
+              <div className="text-xs text-zinc-500">
+                Default is XAF (Cameroon)
+              </div>
+            </div>
           </div>
 
           {error ? (

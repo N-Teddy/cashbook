@@ -26,7 +26,15 @@ pub fn run() {
             db_location,
             commands::accounts::account_count,
             commands::accounts::account_list,
-            commands::accounts::account_create
+            commands::accounts::account_create,
+            commands::accounts::account_set_default,
+            commands::accounts::account_archive,
+            commands::accounts::account_delete,
+            commands::categories::category_list,
+            commands::categories::category_create,
+            commands::transactions::transaction_list,
+            commands::transactions::transaction_create_expense_income,
+            commands::transactions::transaction_create_transfer
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,6 +1,8 @@
 import { AppShell } from "./components/AppShell";
 import { AccountSetupGate } from "./features/accounts/AccountSetupGate";
 import { useState } from "react";
+import { TransactionsScreen } from "./features/transactions/TransactionsScreen";
+import { SettingsScreen } from "./features/settings/SettingsScreen";
 
 function App() {
   const [ready, setReady] = useState(false);
@@ -59,16 +61,7 @@ function App() {
             );
 
           case "transactions":
-            return (
-              <section className="space-y-3">
-                <h1 className="text-lg font-semibold tracking-tight">
-                  Activity
-                </h1>
-                <div className="rounded-2xl border border-dashed border-zinc-300 bg-white p-4 text-sm text-zinc-600">
-                  Transaction list UI will go here.
-                </div>
-              </section>
-            );
+            return <TransactionsScreen />;
 
           case "debts":
             return (
@@ -81,26 +74,7 @@ function App() {
             );
 
           case "settings":
-            return (
-              <section className="space-y-3">
-                <h1 className="text-lg font-semibold tracking-tight">
-                  Settings
-                </h1>
-                <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-                  <div className="text-sm font-medium">Security</div>
-                  <div className="mt-1 text-xs text-zinc-500">
-                    Biometric/pattern lock will be configured here.
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-                  <div className="text-sm font-medium">Cloud backup</div>
-                  <div className="mt-1 text-xs text-zinc-500">
-                    Direct MongoDB (encrypted snapshot) setup will be configured
-                    here.
-                  </div>
-                </div>
-              </section>
-            );
+            return <SettingsScreen />;
         }
       }}
     </AppShell>

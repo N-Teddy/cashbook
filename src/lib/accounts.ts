@@ -7,6 +7,8 @@ export type Account = {
   name: string;
   type: AccountType | string;
   currency: string;
+  isDefault: boolean;
+  usageCount: number;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -28,5 +30,17 @@ export async function accountList(): Promise<Account[]> {
 
 export async function accountCreate(input: AccountCreateInput): Promise<Account> {
   return invoke<Account>("account_create", { input });
+}
+
+export async function accountSetDefault(accountId: string): Promise<void> {
+  return invoke<void>("account_set_default", { accountId });
+}
+
+export async function accountArchive(accountId: string): Promise<void> {
+  return invoke<void>("account_archive", { accountId });
+}
+
+export async function accountDelete(accountId: string): Promise<void> {
+  return invoke<void>("account_delete", { accountId });
 }
 
