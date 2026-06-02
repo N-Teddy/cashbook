@@ -34,7 +34,7 @@
   },
   "plugins": {
     "updater": {
-      "endpoints": ["https://github.com/<your-username>/<repo-name>/releases/latest/download/latest.json"],
+      "endpoints": ["https://github.com/N-Teddy/cashbook/releases/latest/download/latest.json"],
       "dialog": true,
       "pubkey": "<YOUR_ED25519_PUBLIC_KEY>"
     }
