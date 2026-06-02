@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+/* Small app defaults (Tauri mobile friendly) */
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  @apply bg-zinc-50 text-zinc-950;
+}
