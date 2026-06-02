@@ -1,7 +1,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+mod commands;
 mod db;
 mod error;
-mod commands;
 
 use db::Db;
 use tauri::Manager;
@@ -16,6 +16,7 @@ fn db_location(app: tauri::AppHandle) -> Result<String, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_biometric::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let db = Db::open(&app.handle())?;
@@ -29,9 +30,16 @@ pub fn run() {
             commands::accounts::account_create,
             commands::accounts::account_set_default,
             commands::accounts::account_archive,
+            commands::accounts::account_unarchive,
             commands::accounts::account_delete,
             commands::categories::category_list,
             commands::categories::category_create,
+            commands::dashboard::dashboard_month_summary,
+            commands::security::security_state,
+            commands::security::security_set_lock_enabled,
+            commands::security::security_set_biometric_enabled,
+            commands::security::security_set_pattern,
+            commands::security::security_verify_pattern,
             commands::transactions::transaction_list,
             commands::transactions::transaction_create_expense_income,
             commands::transactions::transaction_create_transfer

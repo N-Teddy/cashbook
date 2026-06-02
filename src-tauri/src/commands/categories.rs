@@ -119,4 +119,3 @@ pub fn category_create(db: State<'_, Db>, input: CategoryCreateInput) -> Result<
         parent_id: input.parent_id,
     })
 }
-

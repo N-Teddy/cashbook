@@ -15,6 +15,7 @@ pub struct Account {
     pub currency: String,
     pub is_default: bool,
     pub usage_count: u64,
+    pub is_archived: bool,
     pub created_at: String,
     pub updated_at: String,
     pub deleted_at: Option<String>,
@@ -75,7 +76,6 @@ pub fn account_list(db: State<'_, Db>) -> Result<Vec<Account>, String> {
               ) AS usage_count
             FROM accounts
             a
-            WHERE a.deleted_at IS NULL
             ORDER BY a.created_at ASC;
             "#,
         )
@@ -85,16 +85,18 @@ pub fn account_list(db: State<'_, Db>) -> Result<Vec<Account>, String> {
         .query_map([], |row| {
             let id: String = row.get(0)?;
             let usage: i64 = row.get(7)?;
+            let deleted_at: Option<String> = row.get(6)?;
             Ok(Account {
                 is_default: default_id.as_deref() == Some(id.as_str()),
                 usage_count: usage.max(0) as u64,
+                is_archived: deleted_at.is_some(),
                 id,
                 name: row.get(1)?,
                 r#type: row.get(2)?,
                 currency: row.get(3)?,
                 created_at: row.get(4)?,
                 updated_at: row.get(5)?,
-                deleted_at: row.get(6)?,
+                deleted_at,
             })
         })
         .map_err(|e| e.to_string())?;
@@ -161,6 +163,7 @@ pub fn account_create(db: State<'_, Db>, input: AccountCreateInput) -> Result<Ac
         currency,
         is_default: !has_default,
         usage_count: 0,
+        is_archived: false,
         created_at: now.clone(),
         updated_at: now,
         deleted_at: None,
@@ -217,6 +220,28 @@ pub fn account_archive(db: State<'_, Db>, account_id: String) -> Result<(), Stri
         .map_err(|e| e.to_string())?;
     if changed == 0 {
         return Err("account not found (or already archived)".to_string());
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn account_unarchive(db: State<'_, Db>, account_id: String) -> Result<(), String> {
+    let id = account_id.trim().to_string();
+    if id.is_empty() {
+        return Err("accountId is required".to_string());
+    }
+    let conn = db.0.lock().map_err(|_| "db lock poisoned".to_string())?;
+    let now = now_rfc3339();
+
+    let changed = conn
+        .execute(
+            "UPDATE accounts SET deleted_at = NULL, updated_at = ?2 WHERE id = ?1 AND deleted_at IS NOT NULL;",
+            params![id, now],
+        )
+        .map_err(|e| e.to_string())?;
+    if changed == 0 {
+        return Err("account not found (or not archived)".to_string());
     }
 
     Ok(())

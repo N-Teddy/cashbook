@@ -9,6 +9,7 @@ export type Account = {
   currency: string;
   isDefault: boolean;
   usageCount: number;
+  isArchived: boolean;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -38,6 +39,10 @@ export async function accountSetDefault(accountId: string): Promise<void> {
 
 export async function accountArchive(accountId: string): Promise<void> {
   return invoke<void>("account_archive", { accountId });
+}
+
+export async function accountUnarchive(accountId: string): Promise<void> {
+  return invoke<void>("account_unarchive", { accountId });
 }
 
 export async function accountDelete(accountId: string): Promise<void> {

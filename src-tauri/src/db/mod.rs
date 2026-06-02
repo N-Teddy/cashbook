@@ -95,4 +95,3 @@ fn seed_defaults(conn: &Connection) -> Result<(), DbError> {
 
     Ok(())
 }
-

@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRightLeft, Plus, TrendingDown, TrendingUp } from "lucide-react";
+import {
+  ArrowRightLeft,
+  Filter,
+  Plus,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
 import { accountList, type Account } from "../../lib/accounts";
 import { categoryList, type Category } from "../../lib/categories";
 import {
@@ -8,6 +14,7 @@ import {
   transactionList,
   type TransactionRow,
 } from "../../lib/transactions";
+import { Modal } from "../../components/Modal";
 
 function todayRfc3339(): string {
   return new Date().toISOString();
@@ -39,6 +46,17 @@ export function TransactionsScreen() {
     "all",
   );
 
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterType, setFilterType] = useState<
+    "all" | "expense" | "income" | "transfer"
+  >("all");
+  const [filterCategoryId, setFilterCategoryId] = useState<string>("all");
+  const [filterQuery, setFilterQuery] = useState("");
+  const [filterMinAmount, setFilterMinAmount] = useState("");
+  const [filterMaxAmount, setFilterMaxAmount] = useState("");
+  const [filterFromDate, setFilterFromDate] = useState(""); // yyyy-mm-dd
+  const [filterToDate, setFilterToDate] = useState(""); // yyyy-mm-dd
+
   const [showAdd, setShowAdd] = useState(false);
   const [mode, setMode] = useState<Mode>("expense");
   const [amount, setAmount] = useState("");
@@ -53,6 +71,79 @@ export function TransactionsScreen() {
   const activeCategories = useMemo(() => {
     return mode === "income" ? incomeCategories : expenseCategories;
   }, [expenseCategories, incomeCategories, mode]);
+
+  const allCategories = useMemo(() => {
+    return [...expenseCategories, ...incomeCategories].sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+  }, [expenseCategories, incomeCategories]);
+
+  const visibleRows = useMemo(() => {
+    const q = filterQuery.trim().toLowerCase();
+    const min = filterMinAmount.trim() ? Number(filterMinAmount) : null;
+    const max = filterMaxAmount.trim() ? Number(filterMaxAmount) : null;
+    const from = filterFromDate ? new Date(`${filterFromDate}T00:00:00Z`) : null;
+    const to = filterToDate ? new Date(`${filterToDate}T23:59:59Z`) : null;
+
+    return rows.filter((r) => {
+      if (filterType !== "all" && r.type !== filterType) return false;
+      if (filterCategoryId !== "all" && r.categoryId !== filterCategoryId)
+        return false;
+
+      if (q) {
+        const hay = [
+          r.merchant ?? "",
+          r.note ?? "",
+          r.categoryName ?? "",
+          r.accountName ?? "",
+          r.fromAccountName ?? "",
+          r.toAccountName ?? "",
+        ]
+          .join(" ")
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+
+      const absAmount = Math.abs(r.amountMinor);
+      if (min != null && Number.isFinite(min) && absAmount < min) return false;
+      if (max != null && Number.isFinite(max) && absAmount > max) return false;
+
+      const d = new Date(r.occurredAt);
+      if (from && d < from) return false;
+      if (to && d > to) return false;
+
+      return true;
+    });
+  }, [
+    filterCategoryId,
+    filterFromDate,
+    filterMaxAmount,
+    filterMinAmount,
+    filterQuery,
+    filterToDate,
+    filterType,
+    rows,
+  ]);
+
+  const activeFilterCount = useMemo(() => {
+    let n = 0;
+    if (filterType !== "all") n++;
+    if (filterCategoryId !== "all") n++;
+    if (filterQuery.trim()) n++;
+    if (filterMinAmount.trim()) n++;
+    if (filterMaxAmount.trim()) n++;
+    if (filterFromDate) n++;
+    if (filterToDate) n++;
+    return n;
+  }, [
+    filterCategoryId,
+    filterFromDate,
+    filterMaxAmount,
+    filterMinAmount,
+    filterQuery,
+    filterToDate,
+    filterType,
+  ]);
 
   async function refresh() {
     setError(null);
@@ -144,14 +235,29 @@ export function TransactionsScreen() {
     <section className="space-y-3">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold tracking-tight">Activity</h1>
-        <button
-          type="button"
-          onClick={() => setShowAdd((v) => !v)}
-          className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-3 py-2 text-sm font-medium text-white"
-        >
-          <Plus className="size-4" />
-          Add
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowFilters(true)}
+            className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-medium"
+          >
+            <Filter className="size-4" />
+            Filters
+            {activeFilterCount > 0 ? (
+              <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-xs text-white">
+                {activeFilterCount}
+              </span>
+            ) : null}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAdd(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-3 py-2 text-sm font-medium text-white"
+          >
+            <Plus className="size-4" />
+            Add
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center gap-2">
@@ -177,8 +283,123 @@ export function TransactionsScreen() {
         </div>
       ) : null}
 
-      {showAdd ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+      <Modal
+        title="Filters"
+        open={showFilters}
+        onClose={() => setShowFilters(false)}
+      >
+        <div className="grid gap-3">
+          <label className="block">
+            <div className="text-xs font-medium text-zinc-700">Type</div>
+            <select
+              value={filterType}
+              onChange={(e) =>
+                setFilterType(
+                  e.currentTarget.value as "all" | Mode | "transfer",
+                )
+              }
+              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400"
+            >
+              <option value="all">All</option>
+              <option value="expense">Expense</option>
+              <option value="income">Income</option>
+              <option value="transfer">Transfer</option>
+            </select>
+          </label>
+
+          <label className="block">
+            <div className="text-xs font-medium text-zinc-700">Category</div>
+            <select
+              value={filterCategoryId}
+              onChange={(e) => setFilterCategoryId(e.currentTarget.value)}
+              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400"
+            >
+              <option value="all">All</option>
+              {allCategories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.kind})
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <div className="text-xs font-medium text-zinc-700">Search</div>
+            <input
+              value={filterQuery}
+              onChange={(e) => setFilterQuery(e.currentTarget.value)}
+              placeholder="merchant, note, category…"
+              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400"
+            />
+          </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <div className="text-xs font-medium text-zinc-700">Min amount</div>
+              <input
+                value={filterMinAmount}
+                onChange={(e) => setFilterMinAmount(e.currentTarget.value)}
+                inputMode="numeric"
+                placeholder="0"
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400"
+              />
+            </label>
+            <label className="block">
+              <div className="text-xs font-medium text-zinc-700">Max amount</div>
+              <input
+                value={filterMaxAmount}
+                onChange={(e) => setFilterMaxAmount(e.currentTarget.value)}
+                inputMode="numeric"
+                placeholder="100000"
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400"
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <div className="text-xs font-medium text-zinc-700">From</div>
+              <input
+                value={filterFromDate}
+                onChange={(e) => setFilterFromDate(e.currentTarget.value)}
+                type="date"
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400"
+              />
+            </label>
+            <label className="block">
+              <div className="text-xs font-medium text-zinc-700">To</div>
+              <input
+                value={filterToDate}
+                onChange={(e) => setFilterToDate(e.currentTarget.value)}
+                type="date"
+                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400"
+              />
+            </label>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setFilterType("all");
+              setFilterCategoryId("all");
+              setFilterQuery("");
+              setFilterMinAmount("");
+              setFilterMaxAmount("");
+              setFilterFromDate("");
+              setFilterToDate("");
+            }}
+            className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-medium"
+          >
+            Reset filters
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        title="Add transaction"
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+      >
           <div className="flex gap-2">
             <button
               type="button"
@@ -353,18 +574,17 @@ export function TransactionsScreen() {
               {saving ? "Saving…" : "Save"}
             </button>
           </div>
-        </div>
-      ) : null}
+      </Modal>
 
       <div className="space-y-2">
         {loading ? (
           <div className="text-sm text-zinc-600">Loading…</div>
-        ) : rows.length === 0 ? (
+        ) : visibleRows.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-zinc-300 bg-white p-4 text-sm text-zinc-600">
             No transactions yet.
           </div>
         ) : (
-          rows.map((r) => {
+          visibleRows.map((r) => {
             const title =
               r.type === "transfer"
                 ? `${r.fromAccountName ?? "From"} → ${r.toAccountName ?? "To"}`

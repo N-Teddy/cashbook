@@ -293,4 +293,3 @@ pub fn transaction_list(
 
     Ok(out)
 }
-

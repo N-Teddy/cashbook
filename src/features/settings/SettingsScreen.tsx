@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { ChevronRight, CreditCard, Lock, Cloud, ArrowLeft } from "lucide-react";
 import { AccountsScreen } from "../accounts/AccountsScreen";
+import { SecurityScreen } from "../security/SecurityScreen";
 
-type Route = "root" | "accounts";
+type Route = "root" | "accounts" | "security";
 
 export function SettingsScreen() {
   const [route, setRoute] = useState<Route>("root");
@@ -25,6 +26,10 @@ export function SettingsScreen() {
         <AccountsScreen />
       </section>
     );
+  }
+
+  if (route === "security") {
+    return <SecurityScreen onBack={() => setRoute("root")} />;
   }
 
   return (
@@ -53,7 +58,11 @@ export function SettingsScreen() {
 
         <div className="h-px bg-zinc-200" />
 
-        <div className="flex items-center justify-between gap-3 px-4 py-4">
+        <button
+          type="button"
+          onClick={() => setRoute("security")}
+          className="flex w-full items-center justify-between gap-3 px-4 py-4"
+        >
           <div className="flex items-center gap-3">
             <div className="grid size-10 place-items-center rounded-2xl bg-zinc-900 text-white">
               <Lock className="size-5" />
@@ -61,11 +70,12 @@ export function SettingsScreen() {
             <div>
               <div className="text-sm font-medium">Security</div>
               <div className="text-xs text-zinc-500">
-                Biometric / pattern lock (next)
+                Fingerprint + pattern lock
               </div>
             </div>
           </div>
-        </div>
+          <ChevronRight className="size-5 text-zinc-400" />
+        </button>
 
         <div className="h-px bg-zinc-200" />
 
