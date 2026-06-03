@@ -44,11 +44,12 @@ jobs:
         with:
           ndk: 29
 
+      - name: Set Android SDK env
+        run: echo "ANDROID_HOME=${{ steps.setup-android.outputs.sdk-path }}" >> "$GITHUB_ENV"
+
       - name: Init Android Gradle project
         run: pnpm exec tauri android init
         working-directory: src-tauri
-        env:
-          ANDROID_HOME: ${{ steps.setup-android.outputs.sdk-path }}
 
       - name: Prepare keystore
         run: |
