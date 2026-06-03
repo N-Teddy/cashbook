@@ -32,11 +32,6 @@ jobs:
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
 
-      - name: Install Android NDK
-        uses: nttld/setup-ndk@v1
-        with:
-          ndk-version: 27.0.12077973
-
       - name: Setup JDK 17
         uses: actions/setup-java@v4
         with:
