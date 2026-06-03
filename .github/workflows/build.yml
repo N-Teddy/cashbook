@@ -44,7 +44,10 @@ jobs:
           echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
 
       - name: Install NDK via sdkmanager
-        run: yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "ndk;29.0.14206865"
+        run: |
+          yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "ndk;29.0.14206865"
+          ls -la /usr/local/lib/android/sdk/ndk/
+          ls -la /usr/local/lib/android/sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/bin/ | head -20
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
 
