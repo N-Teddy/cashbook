@@ -36,7 +36,7 @@
     "updater": {
       "endpoints": ["https://github.com/N-Teddy/cashbook/releases/latest/download/latest.json"],
       "dialog": true,
-      "pubkey": "<YOUR_ED25519_PUBLIC_KEY>"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJDNTg0RjRBMzhGQjlFNjEKUldSaG52czRTazlZTEhzQVdQc0dJV1FrM3NEQkcyRlZ3R2NFUFJ3SlRkdVlXUzFySXIzS1dtcUQK"
     }
   }
 }
