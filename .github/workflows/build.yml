@@ -4,14 +4,13 @@ on:
   push:
     branches: ["main"]
     tags: ["v*"]
-  pull_request:
-    branches: ["main"]
 
 jobs:
   android:
     name: Android (APK + AAB)
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    if: github.event_name == 'push'
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,106 +21,93 @@ jobs:
           node-version: 20
 
       - name: Install pnpm
-        run: npm install -g pnpm@9 && pnpm --version
+        run: npm install -g pnpm@9
 
-      - name: Install frontend dependencies
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Setup Rust (stable + Android targets)
+      - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
 
-      - name: Setup JDK 17
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      - name: Configure Android SDK/NDK env
+      - name: Setup Android env
         run: |
-          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
-      - name: Install NDK via sdkmanager
-        run: |
-          yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "ndk;29.0.14206865"
-          ls -la /usr/local/lib/android/sdk/ndk/
-          ls -la /usr/local/lib/android/sdk/ndk/*/toolchains/llvm/prebuilt/linux-x86_64/bin/ | grep clang || true
-        env:
-          ANDROID_HOME: /usr/local/lib/android/sdk
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
 
-      - name: Expose NDK toolchain on PATH
+      - name: Install NDK
         run: |
-          NDK_DIR=$(ls -d /usr/local/lib/android/sdk/ndk/* | head -n1)
-          echo "ANDROID_NDK_HOME=$NDK_DIR" >> "$GITHUB_ENV"
-          BIN_DIR="$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/bin"
-          ln -sf "$(ls "$BIN_DIR"/aarch64-linux-android*-clang | head -n1)" "$BIN_DIR/aarch64-linux-android-clang"
-          echo "$BIN_DIR" >> "$GITHUB_PATH"
-      - name: Init Android Gradle project
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;29.0.14206865"
+
+      - name: Set NDK env
+        run: |
+          NDK_DIR=$(ls -d $ANDROID_HOME/ndk/* | head -n1)
+          echo "ANDROID_NDK_HOME=$NDK_DIR" >> $GITHUB_ENV
+          BIN=$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/bin
+          echo "$BIN" >> $GITHUB_PATH
+
+      - name: Init Android project (Tauri)
         run: pnpm exec tauri android init
-      - name: Check generated Android files
-        run: |
-          find src-tauri/gen/android -maxdepth 2 -type f | sort
         working-directory: src-tauri
-        env:
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
 
-      - name: Prepare keystore
+      - name: Decode keystore
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > src-tauri/upload-keystore.jks
-      - name: Build Android (Tauri managed)
+
+      - name: Build Android (SIGNED)
         run: pnpm exec tauri android build
         working-directory: src-tauri
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
-          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}OME }}
-          SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}KEY_ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}ID_KEY_PASSWORD }}
-          SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}ROID_KEYSTORE_PASSWORD }}
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
           SIGNING_STORE_PATH: upload-keystore.jks
+          SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
 
-      - name: Inspect APK outputs
+      - name: Verify APK signing
+        run: |
+          APK=$(find src-tauri/gen/android -name "*.apk" | head -1)
+          echo "APK: $APK"
+          $ANDROID_HOME/build-tools/*/apksigner verify --verbose "$APK"
+
+      - name: List outputs
         run: |
           find src-tauri/gen/android/app/build/outputs -type f | sort
-
-      - name: Verify APK signature
-        run: |
-          APK=$(find src-tauri/gen/android/app/build/outputs -name "*.apk" | head -1)
-          echo "Checking $APK"
-          $ANDROID_HOME/build-tools/*/apksigner verify --verbose "$APK"
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
           name: android-aab
-          path: src-tauri/gen/android/app/build/outputs/bundle/universalRelease/*.aab
-          if-no-files-found: error
+          path: src-tauri/gen/android/app/build/outputs/bundle/**/**/*.aab
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
-          if-no-files-found: error
+          path: src-tauri/gen/android/app/build/outputs/apk/**/release/*.apk
 
   release:
-    name: GitHub Release
-    needs: [android]
+    needs: android
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
+
     steps:
-      - name: Download all artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          path: ./artifacts
-
-      - name: List artifacts
-        run: find ./artifacts -type f -ls
+          path: artifacts
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: ./artifacts/**/*
-          generate_release_notes: true
+          files: artifacts/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
