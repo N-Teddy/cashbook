@@ -65,6 +65,27 @@ jobs:
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
 
+      - name: Inject tauri.settings.gradle
+        run: python3 -c "
+from pathlib import Path
+Path('src-tauri/gen/android/tauri.settings.gradle').write_text('''pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+''')
+"
+
       - name: Prepare keystore
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > src-tauri/upload-keystore.jks
