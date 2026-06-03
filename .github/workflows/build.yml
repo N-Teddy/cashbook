@@ -69,15 +69,15 @@ jobs:
       - name: Prepare keystore
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > src-tauri/upload-keystore.jks
-      - name: Build Android Release
-        working-directory: src-tauri
+      - name: Build Android (Tauri managed)
         run: pnpm exec tauri android build
+        working-directory: src-tauri
         env:
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
-          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
-          SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}OME }}
+          SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}ID_KEY_PASSWORD }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}ROID_KEYSTORE_PASSWORD }}
           SIGNING_STORE_PATH: upload-keystore.jks
 
       - name: Inspect APK outputs
