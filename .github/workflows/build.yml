@@ -22,8 +22,10 @@ jobs:
           node-version: 20
           cache: "pnpm"
 
-      - name: Enable Corepack
-        run: corepack enable
+      - name: Activate pnpm via Corepack
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.12.3 --activate
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
@@ -45,7 +47,7 @@ jobs:
           java-version: 17
 
       - name: Generate Gradle wrapper (if missing)
-        run: pnpm tauri android init
+        run: pnpm exec tauri android init
         working-directory: src-tauri
 
       - name: Prepare keystore
@@ -53,7 +55,7 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > src-tauri/upload-keystore.jks
 
       - name: Build Android (AAB + APK)
-        run: pnpm tauri build --target android
+        run: pnpm exec tauri build --target android
         working-directory: src-tauri
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
