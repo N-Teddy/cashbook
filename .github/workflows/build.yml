@@ -75,11 +75,14 @@ jobs:
           echo "CC_aarch64-linux-android=aarch64-linux-android-clang" >> "$GITHUB_ENV"
           echo "CXX_aarch64-linux-android=aarch64-linux-android-clang++" >> "$GITHUB_ENV"
 
+      - name: Build frontend
+        run: pnpm build
+        working-directory: src-tauri/..
+
       - name: Build Rust for Android
-        run: pnpm exec tauri build --target aarch64-linux-android
+        run: cargo build --target aarch64-linux-android --release
         working-directory: src-tauri
         env:
-          JAVA_HOME: ${{ env.JAVA_HOME }}
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
           ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
 
