@@ -45,7 +45,7 @@ jobs:
           ndk: 29
 
       - name: Set Android SDK env
-        run: echo "ANDROID_HOME=${{ steps.setup-android.outputs.sdk-path }}" >> "$GITHUB_ENV"
+        run: echo "ANDROID_HOME=${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}" >> "$GITHUB_ENV"
 
       - name: Init Android Gradle project
         run: pnpm exec tauri android init
@@ -57,7 +57,7 @@ jobs:
 
       - name: Expose NDK toolchain on PATH
         run: |
-          NDK_DIR=$(ls -d ${{ steps.setup-android.outputs.sdk-path }}/ndk/* | head -n1)
+          NDK_DIR=$(ls -d "$ANDROID_HOME/ndk/"* | head -n1)
           echo "ANDROID_NDK_HOME=$NDK_DIR" >> "$GITHUB_ENV"
           echo "$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/bin" >> "$GITHUB_PATH"
 
@@ -72,7 +72,7 @@ jobs:
         working-directory: src-tauri
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
-          ANDROID_HOME: ${{ steps.setup-android.outputs.sdk-path }}
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
           ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
 
       - name: Upload AAB
