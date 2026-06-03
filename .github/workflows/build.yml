@@ -47,15 +47,17 @@ jobs:
         run: |
           yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "ndk;29.0.14206865"
           ls -la /usr/local/lib/android/sdk/ndk/
-          ls -la /usr/local/lib/android/sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/linux-x86_64/bin/ | head -20
+          ls -la /usr/local/lib/android/sdk/ndk/*/toolchains/llvm/prebuilt/linux-x86_64/bin/ | grep clang || true
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
 
       - name: Expose NDK toolchain on PATH
         run: |
-          NDK_DIR=/usr/local/lib/android/sdk/ndk/29.0.14206865
+          NDK_DIR=$(ls -d /usr/local/lib/android/sdk/ndk/* | head -n1)
           echo "ANDROID_NDK_HOME=$NDK_DIR" >> "$GITHUB_ENV"
-          echo "$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/bin" >> "$GITHUB_PATH"
+          BIN_DIR="$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          ln -sf "$(ls "$BIN_DIR"/aarch64-linux-android*-clang | head -n1)" "$BIN_DIR/aarch64-linux-android-clang"
+          echo "$BIN_DIR" >> "$GITHUB_PATH"
 
       - name: Init Android Gradle project
         run: pnpm exec tauri android init
