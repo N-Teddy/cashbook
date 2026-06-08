@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ArrowLeft, Plus, Trash2, UserRound } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Gift, HandCoins, Plus, Trash2, UserRound } from "lucide-react";
 import {
   contactCreate,
   contactDelete,
@@ -17,7 +17,20 @@ import {
   type DebtRow,
 } from "../../lib/debts";
 import { accountList, type Account } from "../../lib/accounts";
+import {
+  transactionCreateGiveReceive,
+  transactionCreateLendBorrow,
+  type GiveReceiveCreateInput,
+  type LendBorrowCreateInput,
+} from "../../lib/transactions";
 import { Modal } from "../../components/Modal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/Select";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -257,6 +270,14 @@ function ContactDetailView(props: {
   const [paySaving, setPaySaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<DebtRow | null>(null);
 
+  // quick transaction modal
+  const [showQuickTx, setShowQuickTx] = useState(false);
+  const [quickTxType, setQuickTxType] = useState<"give" | "receive_gift" | "lend" | "borrow">("give");
+  const [quickTxAmount, setQuickTxAmount] = useState("");
+  const [quickTxAccountId, setQuickTxAccountId] = useState("");
+  const [quickTxNote, setQuickTxNote] = useState("");
+  const [quickTxSaving, setQuickTxSaving] = useState(false);
+
   async function refresh() {
     setError(null);
     try {
@@ -377,6 +398,45 @@ function ContactDetailView(props: {
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
   }
 
+  async function onQuickTxSave() {
+    setError(null);
+    const amt = Number(quickTxAmount);
+    if (!Number.isFinite(amt) || amt <= 0 || !Number.isInteger(amt)) {
+      setError("Enter a valid positive integer amount."); return;
+    }
+    if (!quickTxAccountId) {
+      setError("Select an account."); return;
+    }
+    setQuickTxSaving(true);
+    try {
+      if (quickTxType === "give" || quickTxType === "receive_gift") {
+        const input: GiveReceiveCreateInput = {
+          type: quickTxType,
+          amountMinor: Math.trunc(amt),
+          accountId: quickTxAccountId,
+          contactId: contact.id,
+          note: quickTxNote.trim() || undefined,
+          occurredAt: new Date().toISOString(),
+        };
+        await transactionCreateGiveReceive(input);
+      } else {
+        const input: LendBorrowCreateInput = {
+          type: quickTxType,
+          amountMinor: Math.trunc(amt),
+          accountId: quickTxAccountId,
+          contactId: contact.id,
+          note: quickTxNote.trim() || undefined,
+          occurredAt: new Date().toISOString(),
+        };
+        await transactionCreateLendBorrow(input);
+      }
+      setQuickTxAmount(""); setQuickTxAccountId(""); setQuickTxNote(""); setShowQuickTx(false);
+      props.onRefreshContacts();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally { setQuickTxSaving(false); }
+  }
+
   return (
     <section className="space-y-3">
       {/* Header */}
@@ -391,13 +451,48 @@ function ContactDetailView(props: {
         <h1 className="flex-1 truncate text-lg font-semibold tracking-tight">
           {contact.name}
         </h1>
-        <button
-          type="button"
-          onClick={() => setShowAdd(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-3 py-2 text-sm font-medium text-white"
-        >
-          <Plus className="size-4" /> Add
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => { setQuickTxType("give"); setShowQuickTx(true); }}
+            className="rounded-xl border border-zinc-200 bg-white p-2 text-zinc-600"
+            title="Give money (no repayment)"
+          >
+            <Gift className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => { setQuickTxType("receive_gift"); setShowQuickTx(true); }}
+            className="rounded-xl border border-zinc-200 bg-white p-2 text-zinc-600"
+            title="Receive gift (no repayment)"
+          >
+            <Gift className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => { setQuickTxType("lend"); setShowQuickTx(true); }}
+            className="rounded-xl border border-zinc-200 bg-white p-2 text-zinc-600"
+            title="Lend money (informal)"
+          >
+            <HandCoins className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => { setQuickTxType("borrow"); setShowQuickTx(true); }}
+            className="rounded-xl border border-zinc-200 bg-white p-2 text-zinc-600"
+            title="Borrow money (informal)"
+          >
+            <HandCoins className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAdd(true)}
+            className="rounded-xl bg-zinc-900 p-2 text-white"
+            title="Add formal debt"
+          >
+            <Plus className="size-4" />
+          </button>
+        </div>
       </div>
 
       {error ? (
@@ -505,13 +600,17 @@ function ContactDetailView(props: {
             <div className="text-xs font-medium text-zinc-700">
               {addKind === "owed_by_me" ? "Money entered into account" : "Money left from account"}
             </div>
-            <select value={addAccountId} onChange={e => setAddAccountId(e.currentTarget.value)}
-              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400">
-              <option value="">None / not tracked</option>
-              {accounts.map(a => (
-                <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>
-              ))}
-            </select>
+            <Select value={addAccountId} onValueChange={setAddAccountId}>
+              <SelectTrigger>
+                <SelectValue placeholder="None / not tracked" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">None / not tracked</SelectItem>
+                {accounts.map(a => (
+                  <SelectItem key={a.id} value={a.id}>{a.name} ({a.currency})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
           <label className="block">
             <div className="text-xs font-medium text-zinc-700">Due date (optional)</div>
@@ -587,13 +686,17 @@ function ContactDetailView(props: {
                       ? "Money leaves account (you're paying back)"
                       : "Money enters account (they're paying you back)"}
                   </div>
-                  <select value={payAccountId} onChange={e => setPayAccountId(e.currentTarget.value)}
-                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400">
-                    <option value="">None / not tracked</option>
-                    {accounts.map(a => (
-                      <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>
-                    ))}
-                  </select>
+                  <Select value={payAccountId} onValueChange={setPayAccountId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="None / not tracked" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None / not tracked</SelectItem>
+                      {accounts.map(a => (
+                        <SelectItem key={a.id} value={a.id}>{a.name} ({a.currency})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </label>
                 <label className="block">
                   <div className="text-xs font-medium text-zinc-700">Note (optional)</div>
@@ -694,6 +797,55 @@ function ContactDetailView(props: {
           </div>
         </Modal>
       ) : null}
+
+      {/* Quick Transaction Modal */}
+      <Modal
+        title={quickTxType === "give" ? "Give money" :
+          quickTxType === "receive_gift" ? "Receive gift" :
+            quickTxType === "lend" ? "Lend money" : "Borrow money"}
+        open={showQuickTx}
+        onClose={() => { setQuickTxAmount(""); setQuickTxAccountId(""); setQuickTxNote(""); setShowQuickTx(false); }}
+      >
+        <div className="grid gap-3">
+          <div className="rounded-2xl bg-zinc-50 px-3 py-2 text-xs text-zinc-500">
+            {quickTxType === "give" ? `Give money to ${contact.name} with no expectation of return.` :
+              quickTxType === "receive_gift" ? `Receive money from ${contact.name} with no expectation of return.` :
+                quickTxType === "lend" ? `Lend money to ${contact.name} with expectation of return (informal, not a formal debt).` :
+                  `Borrow money from ${contact.name} with expectation of return (informal, not a formal debt).`}
+          </div>
+          <label className="block">
+            <div className="text-xs font-medium text-zinc-700">Amount</div>
+            <input value={quickTxAmount} onChange={e => setQuickTxAmount(e.currentTarget.value)}
+              inputMode="numeric" placeholder="e.g. 500"
+              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400" />
+          </label>
+          <label className="block">
+            <div className="text-xs font-medium text-zinc-700">
+              {quickTxType === "give" || quickTxType === "lend" ? "Money leaves account" : "Money enters account"}
+            </div>
+            <Select value={quickTxAccountId} onValueChange={setQuickTxAccountId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select account…" />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts.map(a => (
+                  <SelectItem key={a.id} value={a.id}>{a.name} ({a.currency})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
+          <label className="block">
+            <div className="text-xs font-medium text-zinc-700">Note (optional)</div>
+            <input value={quickTxNote} onChange={e => setQuickTxNote(e.currentTarget.value)}
+              placeholder="Anything to remember…"
+              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400" />
+          </label>
+          <button type="button" disabled={quickTxSaving} onClick={onQuickTxSave}
+            className="mt-1 w-full rounded-xl bg-zinc-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-60">
+            {quickTxSaving ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </Modal>
     </section>
   );
 }
@@ -777,14 +929,7 @@ export function DebtsScreen() {
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold tracking-tight">Debts</h1>
-        <button
-          type="button"
-          onClick={() => setShowAddContact(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-3 py-2 text-sm font-medium text-white"
-        >
-          <Plus className="size-4" /> Add person
-        </button>
+        <h1 className="text-lg font-semibold tracking-tight">People</h1>
       </div>
 
       {error ? (

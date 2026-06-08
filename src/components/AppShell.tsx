@@ -3,8 +3,9 @@ import { useMemo, useState } from "react";
 import {
   ChartNoAxesCombined,
   CreditCard,
-  HandCoins,
   Settings,
+  Tag,
+  Users,
 } from "lucide-react";
 
 type TabId = "dashboard" | "transactions" | "debts" | "settings";
@@ -22,7 +23,7 @@ export function AppShell(props: { children: (tab: TabId) => ReactNode }) {
     () => [
       { id: "dashboard", label: "Overview", icon: <ChartNoAxesCombined /> },
       { id: "transactions", label: "Activity", icon: <CreditCard /> },
-      { id: "debts", label: "Debts", icon: <HandCoins /> },
+      { id: "debts", label: "People", icon: <Users /> },
       { id: "settings", label: "Settings", icon: <Settings /> },
     ],
     [],

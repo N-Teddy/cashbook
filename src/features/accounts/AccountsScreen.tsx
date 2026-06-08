@@ -10,6 +10,13 @@ import {
   type AccountType,
 } from "../../lib/accounts";
 import { Modal } from "../../components/Modal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/Select";
 
 type AccountTypeOption = {
   value: AccountType;
@@ -129,55 +136,56 @@ export function AccountsScreen() {
         open={showAdd}
         onClose={() => setShowAdd(false)}
       >
-          <div className="grid gap-3">
-            <label className="block">
-              <div className="text-xs font-medium text-zinc-700">Name</div>
-              <input
-                value={name}
-                onChange={(e) => setName(e.currentTarget.value)}
-                placeholder="e.g. Purse, MTN MoMo, Bank…"
-                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400"
-              />
-            </label>
+        <div className="grid gap-3">
+          <label className="block">
+            <div className="text-xs font-medium text-zinc-700">Name</div>
+            <input
+              value={name}
+              onChange={(e) => setName(e.currentTarget.value)}
+              placeholder="e.g. Purse, MTN MoMo, Bank…"
+              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400"
+            />
+          </label>
 
-            <label className="block">
-              <div className="text-xs font-medium text-zinc-700">Type</div>
-              <select
-                value={type}
-                onChange={(e) => setType(e.currentTarget.value as AccountType)}
-                className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400"
-              >
+          <label className="block">
+            <div className="text-xs font-medium text-zinc-700">Type</div>
+            <Select value={type} onValueChange={(v) => setType(v as AccountType)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select type…" />
+              </SelectTrigger>
+              <SelectContent>
                 {typeOptions.map((o) => (
-                  <option key={o.value} value={o.value}>
+                  <SelectItem key={o.value} value={o.value}>
                     {o.label}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
-            </label>
+              </SelectContent>
+            </Select>
+          </label>
 
-            <label className="block">
-              <div className="text-xs font-medium text-zinc-700">Currency</div>
-              <input
-                value={currency}
-                onChange={(e) => setCurrency(e.currentTarget.value)}
-                placeholder="XAF"
-                autoCapitalize="characters"
-                className="mt-1 w-28 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400"
-              />
-              <div className="mt-1 text-xs text-zinc-500">
-                Use ISO code (e.g. XAF, USD). Default is XAF.
-              </div>
-            </label>
+          <label className="block">
+            <div className="text-xs font-medium text-zinc-700">Currency</div>
+            <input
+              value={currency}
+              onChange={(e) => setCurrency(e.currentTarget.value)}
+              placeholder="XAF"
+              autoCapitalize="characters"
+              className="mt-1 w-28 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400"
+            />
+            <div className="mt-1 text-xs text-zinc-500">
+              Use ISO code (e.g. XAF, USD). Default is XAF.
+            </div>
+          </label>
 
-            <button
-              type="button"
-              disabled={saving}
-              onClick={onAdd}
-              className="mt-1 w-full rounded-xl bg-zinc-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
-            >
-              {saving ? "Saving…" : "Save account"}
-            </button>
-          </div>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={onAdd}
+            className="mt-1 w-full rounded-xl bg-zinc-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
+          >
+            {saving ? "Saving…" : "Save account"}
+          </button>
+        </div>
       </Modal>
 
       <div className="space-y-2">

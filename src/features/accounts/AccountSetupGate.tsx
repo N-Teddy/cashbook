@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { WalletMinimal } from "lucide-react";
 import { accountCount, accountCreate } from "../../lib/accounts";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/Select";
 
 type AccountTypeOption = {
   value: "cash" | "bank" | "mobile_money" | "card" | "other";
@@ -134,17 +141,18 @@ export function AccountSetupGate(props: { onReady: () => void }) {
 
           <label className="block">
             <div className="text-xs font-medium text-zinc-700">Type</div>
-            <select
-              value={type}
-              onChange={(e) => setType(e.currentTarget.value as typeof type)}
-              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400"
-            >
-              {options.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+            <Select value={type} onValueChange={(v) => setType(v as typeof type)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select type…" />
+              </SelectTrigger>
+              <SelectContent>
+                {options.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div className="mt-1 text-xs text-zinc-500">
               {options.find((o) => o.value === type)?.hint}
             </div>

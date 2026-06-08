@@ -2,27 +2,30 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRightLeft,
   Filter,
-  Gift,
   Plus,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
 import { accountList, type Account } from "../../lib/accounts";
 import { categoryList, type Category } from "../../lib/categories";
-import { contactList, type ContactRow } from "../../lib/debts";
 import {
   isInflow,
   isOutflow,
   transactionCreateExpenseIncome,
-  transactionCreateGiveReceive,
   transactionCreateTransfer,
   transactionList,
   txTypeLabel,
-  type GiveReceiveCreateInput,
   type TransactionRow,
   type TransactionType,
 } from "../../lib/transactions";
 import { Modal } from "../../components/Modal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/Select";
 
 function todayRfc3339(): string {
   return new Date().toISOString();
@@ -39,20 +42,20 @@ function formatMoney(currency: string, amountMinor: number) {
   }
 }
 
-type Mode = "expense" | "income" | "transfer" | "give" | "receive_gift";
+type Mode = "expense" | "income" | "transfer";
 
 // Types shown in the filter dropdown
 const FILTER_TYPES: { value: string; label: string }[] = [
-  { value: "all",              label: "All" },
-  { value: "expense",          label: "Expense" },
-  { value: "income",           label: "Income" },
-  { value: "transfer",         label: "Transfer" },
-  { value: "lend",             label: "Lent" },
-  { value: "borrow",           label: "Borrowed" },
-  { value: "give",             label: "Given" },
-  { value: "receive_gift",     label: "Received (gift)" },
-  { value: "debt_repayment",   label: "Debt repayment" },
-  { value: "debt_collection",  label: "Debt collection" },
+  { value: "all", label: "All" },
+  { value: "expense", label: "Expense" },
+  { value: "income", label: "Income" },
+  { value: "transfer", label: "Transfer" },
+  { value: "lend", label: "Lent" },
+  { value: "borrow", label: "Borrowed" },
+  { value: "give", label: "Given" },
+  { value: "receive_gift", label: "Received (gift)" },
+  { value: "debt_repayment", label: "Debt repayment" },
+  { value: "debt_collection", label: "Debt collection" },
 ];
 
 export function TransactionsScreen() {
@@ -60,7 +63,6 @@ export function TransactionsScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [contacts, setContacts] = useState<ContactRow[]>([]);
   const [expenseCategories, setExpenseCategories] = useState<Category[]>([]);
   const [incomeCategories, setIncomeCategories] = useState<Category[]>([]);
   const [rows, setRows] = useState<TransactionRow[]>([]);
@@ -82,7 +84,6 @@ export function TransactionsScreen() {
   const [amount, setAmount] = useState("");
   const [accountId, setAccountId] = useState<string>("");
   const [categoryId, setCategoryId] = useState<string>("");
-  const [contactId, setContactId] = useState<string>("");
   const [merchant, setMerchant] = useState("");
   const [note, setNote] = useState("");
   const [fromAccountId, setFromAccountId] = useState<string>("");
@@ -176,16 +177,14 @@ export function TransactionsScreen() {
   async function refresh() {
     setError(null);
     try {
-      const [a, exp, inc, co] = await Promise.all([
+      const [a, exp, inc] = await Promise.all([
         accountList(),
         categoryList("expense"),
         categoryList("income"),
-        contactList(),
       ]);
       setAccounts(a);
       setExpenseCategories(exp);
       setIncomeCategories(inc);
-      setContacts(co);
 
       const list = await transactionList({
         limit: 200,
@@ -208,7 +207,7 @@ export function TransactionsScreen() {
   useEffect(() => { if (!loading) void refresh(); }, [selectedAccountId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function resetForm() {
-    setAmount(""); setMerchant(""); setNote(""); setContactId("");
+    setAmount(""); setMerchant(""); setNote("");
   }
 
   async function onSave() {
@@ -231,17 +230,6 @@ export function TransactionsScreen() {
           note: note.trim() || undefined,
           occurredAt: todayRfc3339(),
         });
-      } else if (mode === "give" || mode === "receive_gift") {
-        if (!accountId) throw new Error("Pick an account.");
-        const input: GiveReceiveCreateInput = {
-          type: mode,
-          amountMinor,
-          accountId,
-          contactId: contactId || undefined,
-          note: note.trim() || undefined,
-          occurredAt: todayRfc3339(),
-        };
-        await transactionCreateGiveReceive(input);
       } else {
         if (!accountId) throw new Error("Pick an account.");
         await transactionCreateExpenseIncome({
@@ -249,7 +237,6 @@ export function TransactionsScreen() {
           amountMinor,
           accountId,
           categoryId: categoryId || undefined,
-          contactId: contactId || undefined,
           merchant: merchant.trim() || undefined,
           note: note.trim() || undefined,
           occurredAt: todayRfc3339(),
@@ -281,8 +268,7 @@ export function TransactionsScreen() {
     if (r.type === "transfer") return "Transfer";
     const parts: string[] = [label];
     if (r.accountName) parts.push(r.accountName);
-    if (r.categoryName && r.type !== "give" && r.type !== "receive_gift")
-      parts.push(r.categoryName);
+    if (r.categoryName) parts.push(r.categoryName);
     return parts.join(" · ");
   }
 
@@ -300,12 +286,6 @@ export function TransactionsScreen() {
   }
 
   // ── Render ──────────────────────────────────────────────────────────────
-
-  const showContactPicker =
-    mode === "give" ||
-    mode === "receive_gift" ||
-    mode === "expense" ||
-    mode === "income";
 
   return (
     <section className="space-y-3">
@@ -339,18 +319,19 @@ export function TransactionsScreen() {
 
       {/* Account filter */}
       <div className="flex items-center gap-2">
-        <select
-          value={selectedAccountId}
-          onChange={(e) => setSelectedAccountId(e.currentTarget.value)}
-          className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400"
-        >
-          <option value="all">All accounts</option>
-          {accounts.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name} ({a.currency})
-            </option>
-          ))}
-        </select>
+        <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="All accounts" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All accounts</SelectItem>
+            {accounts.map((a) => (
+              <SelectItem key={a.id} value={a.id}>
+                {a.name} ({a.currency})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {error ? (
@@ -364,29 +345,31 @@ export function TransactionsScreen() {
         <div className="grid gap-3">
           <label className="block">
             <div className="text-xs font-medium text-zinc-700">Type</div>
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.currentTarget.value)}
-              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400"
-            >
-              {FILTER_TYPES.map((ft) => (
-                <option key={ft.value} value={ft.value}>{ft.label}</option>
-              ))}
-            </select>
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select type…" />
+              </SelectTrigger>
+              <SelectContent>
+                {FILTER_TYPES.map((ft) => (
+                  <SelectItem key={ft.value} value={ft.value}>{ft.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
 
           <label className="block">
             <div className="text-xs font-medium text-zinc-700">Category</div>
-            <select
-              value={filterCategoryId}
-              onChange={(e) => setFilterCategoryId(e.currentTarget.value)}
-              className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400"
-            >
-              <option value="all">All</option>
-              {allCategories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name} ({c.kind})</option>
-              ))}
-            </select>
+            <Select value={filterCategoryId} onValueChange={setFilterCategoryId}>
+              <SelectTrigger>
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                {allCategories.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name} ({c.kind})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
 
           <label className="block">
@@ -447,7 +430,7 @@ export function TransactionsScreen() {
 
       {/* Add transaction modal */}
       <Modal title="Add transaction" open={showAdd} onClose={() => setShowAdd(false)}>
-        {/* Mode tabs — row 1: expense/income/transfer, row 2: give/receive */}
+        {/* Mode tabs — expense/income/transfer */}
         <div className="grid gap-2">
           <div className="flex gap-2">
             {(["expense", "income", "transfer"] as Mode[]).map((m) => (
@@ -456,34 +439,13 @@ export function TransactionsScreen() {
                   mode === m ? "bg-zinc-900 text-white" : "border border-zinc-200 bg-white"].join(" ")}>
                 <span className="inline-flex items-center justify-center gap-1.5">
                   {m === "expense" ? <TrendingDown className="size-4" /> :
-                   m === "income"  ? <TrendingUp   className="size-4" /> :
-                                     <ArrowRightLeft className="size-4" />}
+                    m === "income" ? <TrendingUp className="size-4" /> :
+                      <ArrowRightLeft className="size-4" />}
                   {m === "expense" ? "Expense" : m === "income" ? "Income" : "Transfer"}
                 </span>
               </button>
             ))}
           </div>
-          <div className="flex gap-2">
-            {(["give", "receive_gift"] as Mode[]).map((m) => (
-              <button key={m} type="button" onClick={() => setMode(m)}
-                className={["flex-1 rounded-xl px-2 py-2 text-sm font-medium",
-                  mode === m ? "bg-zinc-900 text-white" : "border border-zinc-200 bg-white"].join(" ")}>
-                <span className="inline-flex items-center justify-center gap-1.5">
-                  <Gift className="size-4" />
-                  {m === "give" ? "Give" : "Receive"}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {/* Context hint */}
-          {(mode === "give" || mode === "receive_gift") ? (
-            <div className="rounded-2xl bg-zinc-50 px-3 py-2 text-xs text-zinc-500">
-              {mode === "give"
-                ? "Money you give to someone with no expectation of return."
-                : "Money you receive from someone with no expectation of return."}
-            </div>
-          ) : null}
         </div>
 
         <div className="mt-3 grid gap-3">
@@ -501,25 +463,29 @@ export function TransactionsScreen() {
             <>
               <label className="block">
                 <div className="text-xs font-medium text-zinc-700">From</div>
-                <select value={fromAccountId}
-                  onChange={(e) => setFromAccountId(e.currentTarget.value)}
-                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400">
-                  <option value="" disabled>Select account…</option>
-                  {accounts.map((a) => (
-                    <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>
-                  ))}
-                </select>
+                <Select value={fromAccountId} onValueChange={setFromAccountId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select account…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>{a.name} ({a.currency})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </label>
               <label className="block">
                 <div className="text-xs font-medium text-zinc-700">To</div>
-                <select value={toAccountId}
-                  onChange={(e) => setToAccountId(e.currentTarget.value)}
-                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400">
-                  <option value="" disabled>Select account…</option>
-                  {accounts.map((a) => (
-                    <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>
-                  ))}
-                </select>
+                <Select value={toAccountId} onValueChange={setToAccountId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select account…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>{a.name} ({a.currency})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <div className="mt-1 text-xs text-zinc-500">Same-currency accounts only.</div>
               </label>
             </>
@@ -528,32 +494,34 @@ export function TransactionsScreen() {
               {/* Account */}
               <label className="block">
                 <div className="text-xs font-medium text-zinc-700">
-                  {mode === "give"         ? "Money leaves account" :
-                   mode === "receive_gift" ? "Money enters account" :
-                   mode === "expense"      ? "Account" :
-                                             "Account"}
+                  Account
                 </div>
-                <select value={accountId}
-                  onChange={(e) => setAccountId(e.currentTarget.value)}
-                  className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400">
-                  <option value="" disabled>Select account…</option>
-                  {accounts.map((a) => (
-                    <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>
-                  ))}
-                </select>
+                <Select value={accountId} onValueChange={setAccountId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select account…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>{a.name} ({a.currency})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </label>
 
               {/* Category — only for expense/income */}
               {(mode === "expense" || mode === "income") ? (
                 <label className="block">
                   <div className="text-xs font-medium text-zinc-700">Category</div>
-                  <select value={categoryId}
-                    onChange={(e) => setCategoryId(e.currentTarget.value)}
-                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400">
-                    {activeCategories.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                  <Select value={categoryId} onValueChange={setCategoryId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {activeCategories.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </label>
               ) : null}
 
@@ -565,25 +533,6 @@ export function TransactionsScreen() {
                     onChange={(e) => setMerchant(e.currentTarget.value)}
                     placeholder="e.g. Carrefour"
                     className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400" />
-                </label>
-              ) : null}
-
-              {/* Contact — for give/receive and optionally expense/income */}
-              {showContactPicker ? (
-                <label className="block">
-                  <div className="text-xs font-medium text-zinc-700">
-                    {(mode === "give" || mode === "receive_gift")
-                      ? "Person (optional)"
-                      : "Person — if from/to a contact (optional)"}
-                  </div>
-                  <select value={contactId}
-                    onChange={(e) => setContactId(e.currentTarget.value)}
-                    className="mt-1 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-400">
-                    <option value="">No specific person</option>
-                    {contacts.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
                 </label>
               ) : null}
             </>

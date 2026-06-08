@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { ChevronRight, CreditCard, Lock, Cloud, ArrowLeft } from "lucide-react";
+import { ChevronRight, CreditCard, Lock, Cloud, ArrowLeft, Tag } from "lucide-react";
 import { AccountsScreen } from "../accounts/AccountsScreen";
 import { SecurityScreen } from "../security/SecurityScreen";
+import { CategoriesScreen } from "../categories/CategoriesScreen";
 
-type Route = "root" | "accounts" | "security";
+type Route = "root" | "accounts" | "security" | "categories";
 
 export function SettingsScreen() {
   const [route, setRoute] = useState<Route>("root");
@@ -32,6 +33,10 @@ export function SettingsScreen() {
     return <SecurityScreen onBack={() => setRoute("root")} />;
   }
 
+  if (route === "categories") {
+    return <CategoriesScreen onBack={() => setRoute("root")} />;
+  }
+
   return (
     <section className="space-y-3">
       <h1 className="text-lg font-semibold tracking-tight">Settings</h1>
@@ -50,6 +55,27 @@ export function SettingsScreen() {
               <div className="text-sm font-medium">Accounts</div>
               <div className="text-xs text-zinc-500">
                 Add, archive, delete, set default
+              </div>
+            </div>
+          </div>
+          <ChevronRight className="size-5 text-zinc-400" />
+        </button>
+
+        <div className="h-px bg-zinc-200" />
+
+        <button
+          type="button"
+          onClick={() => setRoute("categories")}
+          className="flex w-full items-center justify-between gap-3 px-4 py-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="grid size-10 place-items-center rounded-2xl bg-zinc-900 text-white">
+              <Tag className="size-5" />
+            </div>
+            <div className="text-left">
+              <div className="text-sm font-medium">Categories</div>
+              <div className="text-xs text-zinc-500">
+                Manage income and expense categories
               </div>
             </div>
           </div>

@@ -61,6 +61,15 @@ export type GiveReceiveCreateInput = {
   occurredAt: string;
 };
 
+export type LendBorrowCreateInput = {
+  type: "lend" | "borrow";
+  amountMinor: number;
+  accountId: string;
+  contactId?: string;
+  note?: string;
+  occurredAt: string;
+};
+
 export async function transactionList(params?: {
   limit?: number;
   accountId?: string;
@@ -87,6 +96,12 @@ export async function transactionCreateGiveReceive(
   return invoke<string>("transaction_create_give_receive", { input });
 }
 
+export async function transactionCreateLendBorrow(
+  input: LendBorrowCreateInput,
+) {
+  return invoke<string>("transaction_create_lend_borrow", { input });
+}
+
 // ---------------------------------------------------------------------------
 // Display helpers — used in both Activity and People screens
 // ---------------------------------------------------------------------------
@@ -94,16 +109,16 @@ export async function transactionCreateGiveReceive(
 /** Human-readable label for each transaction type */
 export function txTypeLabel(type: TransactionType): string {
   switch (type) {
-    case "expense":          return "Expense";
-    case "income":           return "Income";
-    case "transfer":         return "Transfer";
-    case "lend":             return "Lent";
-    case "borrow":           return "Borrowed";
-    case "give":             return "Given";
-    case "receive_gift":     return "Received";
-    case "debt_repayment":   return "Repayment";
-    case "debt_collection":  return "Collection";
-    default:                 return type;
+    case "expense": return "Expense";
+    case "income": return "Income";
+    case "transfer": return "Transfer";
+    case "lend": return "Lent";
+    case "borrow": return "Borrowed";
+    case "give": return "Given";
+    case "receive_gift": return "Received";
+    case "debt_repayment": return "Repayment";
+    case "debt_collection": return "Collection";
+    default: return type;
   }
 }
 

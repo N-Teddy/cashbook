@@ -23,6 +23,13 @@ pub struct CategoryCreateInput {
     pub parent_id: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CategoryUpdateInput {
+    pub id: String,
+    pub name: String,
+}
+
 fn now_rfc3339() -> String {
     Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true)
 }
@@ -118,4 +125,45 @@ pub fn category_create(db: State<'_, Db>, input: CategoryCreateInput) -> Result<
         kind: kind.to_string(),
         parent_id: input.parent_id,
     })
+}
+
+#[tauri::command]
+pub fn category_update(db: State<'_, Db>, input: CategoryUpdateInput) -> Result<(), String> {
+    let name = input.name.trim();
+    if name.is_empty() {
+        return Err("name is required".to_string());
+    }
+
+    let now = now_rfc3339();
+    let conn = db.0.lock().map_err(|_| "db lock poisoned".to_string())?;
+
+    conn.execute(
+        r#"
+        UPDATE categories
+        SET name = ?1, updated_at = ?2
+        WHERE id = ?3 AND deleted_at IS NULL;
+        "#,
+        params![name, now, input.id],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn category_delete(db: State<'_, Db>, id: String) -> Result<(), String> {
+    let now = now_rfc3339();
+    let conn = db.0.lock().map_err(|_| "db lock poisoned".to_string())?;
+
+    conn.execute(
+        r#"
+        UPDATE categories
+        SET deleted_at = ?1
+        WHERE id = ?2;
+        "#,
+        params![now, id],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
 }

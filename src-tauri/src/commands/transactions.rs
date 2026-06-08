@@ -74,6 +74,18 @@ pub struct GiveReceiveCreateInput {
     pub occurred_at: String,
 }
 
+/// Used for lend / borrow — money with repayment obligation (informal, not a formal debt)
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LendBorrowCreateInput {
+    pub r#type: String, // lend | borrow
+    pub amount_minor: i64,
+    pub account_id: String,        // where money leaves / enters
+    pub contact_id: Option<String>, // optional — link to a known person
+    pub note: Option<String>,
+    pub occurred_at: String,
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -260,6 +272,45 @@ pub fn transaction_create_give_receive(
 }
 
 #[tauri::command]
+pub fn transaction_create_lend_borrow(
+    db: State<'_, Db>,
+    input: LendBorrowCreateInput,
+) -> Result<String, String> {
+    if input.r#type != "lend" && input.r#type != "borrow" {
+        return Err("type must be 'lend' or 'borrow'".to_string());
+    }
+    if input.amount_minor <= 0 {
+        return Err("amount must be > 0".to_string());
+    }
+    if input.account_id.trim().is_empty() {
+        return Err("accountId is required".to_string());
+    }
+
+    let conn = db.0.lock().map_err(|_| "db lock poisoned".to_string())?;
+    let currency = account_currency(&conn, &input.account_id)?;
+    let id = Uuid::new_v4().to_string();
+    let now = now_rfc3339();
+
+    insert_transaction(
+        &conn,
+        &id,
+        &input.r#type,
+        input.amount_minor,
+        &currency,
+        Some(&input.account_id),
+        None, None,
+        None, // no category
+        input.contact_id.as_deref(),
+        None, // no merchant
+        input.note.as_deref(),
+        &input.occurred_at,
+        &now,
+    )?;
+
+    Ok(id)
+}
+
+#[tauri::command]
 pub fn transaction_list(
     db: State<'_, Db>,
     limit: Option<u32>,
@@ -314,7 +365,7 @@ pub fn transaction_list(
 
     if let Some(aid) = account_id {
         let sql = format!(
-            "{} AND t.account_id = ?1 ORDER BY t.occurred_at DESC LIMIT ?2;",
+            "{} AND (t.account_id = ?1 OR t.from_account_id = ?1 OR t.to_account_id = ?1) ORDER BY t.occurred_at DESC LIMIT ?2;",
             base
         );
         let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
